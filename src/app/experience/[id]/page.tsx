@@ -4,11 +4,11 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 interface ExperiencePageProps {
-    params: { id: string };
+    params: Promise<{ id: string }>;
 }
 
-export default function ExperiencePage({ params }: ExperiencePageProps) {
-    const { id } = params;
+export default async function ExperiencePage({ params }: ExperiencePageProps) {
+    const { id } = await params; 
 
     return (
         <div className="flex flex-col min-h-screen bg-white">
@@ -28,7 +28,7 @@ export default function ExperiencePage({ params }: ExperiencePageProps) {
                 </div>
 
                 {/* Booking Details Section */}
-                <BookingDetails />
+                <BookingDetails id={id} />
             </div>
         </div>
     );
