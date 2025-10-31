@@ -42,7 +42,7 @@ const BookingDetails = ({ id }: { id?: string }) => {
       <div className="md:col-span-2 space-y-6">
         <div className="relative w-full h-64 md:h-80 rounded-2xl overflow-hidden">
           <Image
-            src="/kayak.png"
+            src="/kayak.jpg"
             alt="Kayaking"
             fill
             className="object-cover"
@@ -65,11 +65,10 @@ const BookingDetails = ({ id }: { id?: string }) => {
               <button
                 key={date}
                 onClick={() => setSelectedDate(date)}
-                className={`px-4 py-2 rounded-md text-sm border transition-all ${
-                  selectedDate === date
+                className={`px-4 py-2 rounded-md text-sm border transition-all ${selectedDate === date
                     ? "bg-yellow-400 text-gray-900 font-semibold"
                     : "bg-gray-50 hover:bg-gray-100 text-gray-700"
-                }`}
+                  }`}
               >
                 {date}
               </button>
@@ -86,13 +85,12 @@ const BookingDetails = ({ id }: { id?: string }) => {
                 key={slot.time}
                 disabled={slot.left === 0}
                 onClick={() => setSelectedTime(slot.time)}
-                className={`px-4 py-2 rounded-md text-sm border flex items-center gap-2 transition-all ${
-                  slot.left === 0
+                className={`px-4 py-2 rounded-md text-sm border flex items-center gap-2 transition-all ${slot.left === 0
                     ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                     : selectedTime === slot.time
-                    ? "bg-yellow-400 text-gray-900 font-semibold"
-                    : "bg-white hover:bg-gray-50 text-gray-800"
-                }`}
+                      ? "bg-yellow-400 text-gray-900 font-semibold"
+                      : "bg-white hover:bg-gray-50 text-gray-800"
+                  }`}
               >
                 {slot.time}
                 {slot.left > 0 && (
