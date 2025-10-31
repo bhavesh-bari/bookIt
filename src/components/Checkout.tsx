@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -15,6 +16,7 @@ const Checkout = () => {
 
   // --- Experience data from query params ---
   const [experience, setExperience] = useState({
+    id: "",
     name: "",
     date: "",
     time: "",
@@ -24,9 +26,10 @@ const Checkout = () => {
     total: 0,
   });
 
-  // Fetch query parameters
+  // Fetch query parameters from URL
   useEffect(() => {
     const expData = {
+      id: searchParams.get("id") || "",
       name: searchParams.get("name") || "Experience",
       date: searchParams.get("date") || "",
       time: searchParams.get("time") || "",
@@ -38,27 +41,40 @@ const Checkout = () => {
     setExperience(expData);
   }, [searchParams]);
 
-  // Apply coupon logic
-  const handleApplyCoupon = () => {
-    if (promo.trim().toUpperCase() === "SAVE25" && !discountApplied) {
-      const discountAmount = experience.total * 0.25;
-      const newTotal = Math.max(0, experience.total - discountAmount);
+  // --- Apply promo via API ---
+  const handleApplyCoupon = async () => {
+    if (!promo.trim()) {
+      toast.error("Please enter a promo code!");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/promo/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: promo, total: experience.total }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.message || "Invalid promo code");
+        return;
+      }
 
       setExperience((prev) => ({
         ...prev,
-        total: Number(newTotal.toFixed(2)),
+        total: data.finalTotal,
       }));
       setDiscountApplied(true);
-      toast.success("Coupon applied! You saved 25%");
-    } else if (discountApplied) {
-      toast.error("Coupon already applied");
-    } else {
-      toast.error("Invalid coupon code");
+      toast.success(`Promo applied! You saved ₹${data.discount}`);
+    } catch (err) {
+      toast.error("Something went wrong while applying promo!");
     }
   };
 
-  // Simulated payment
-  const handlePayment = () => {
+  // --- Confirm and save booking ---
+  const handlePayment = async () => {
     if (!name || !email) {
       toast.error("Please enter all required fields!");
       return;
@@ -69,11 +85,36 @@ const Checkout = () => {
       return;
     }
 
-    const bookingId = "BK" + Math.floor(100000 + Math.random() * 900000);
-    toast.success("Payment Successful!");
-    setTimeout(() => {
-      router.push(`/payment-success?id=${bookingId}`);
-    }, 1000);
+    try {
+      
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          date: experience.date,
+          time: experience.time,
+          qty: experience.qty,
+          total: experience.total,
+          promo: promo || null,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.message || "Booking failed");
+        return;
+      }
+
+      toast.success("Payment Successful!");
+      setTimeout(() => {
+        router.push(`/payment-success?id=${data.booking._id}`);
+      }, 1000);
+    } catch (err) {
+      toast.error("Payment failed! Try again.");
+    }
   };
 
   return (
@@ -118,8 +159,8 @@ const Checkout = () => {
             onClick={handleApplyCoupon}
             disabled={discountApplied}
             className={`w-full sm:w-auto font-medium px-4 py-2 rounded-md transition ${discountApplied
-                ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                : "bg-gray-900 text-white hover:bg-gray-800"
+              ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+              : "bg-gray-900 text-white hover:bg-gray-800"
               }`}
           >
             {discountApplied ? "Applied" : "Apply"}
@@ -169,8 +210,8 @@ const Checkout = () => {
 
         {discountApplied && (
           <div className="flex justify-between text-sm text-green-600 font-semibold">
-            <span>Discount (SAVE25)</span>
-            <span>-25%</span>
+            <span>Discount</span>
+            <span>- Applied</span>
           </div>
         )}
 
@@ -184,8 +225,8 @@ const Checkout = () => {
           onClick={handlePayment}
           disabled={!agreed}
           className={`w-full font-semibold py-2 rounded-md transition-all ${agreed
-              ? "bg-yellow-400 text-gray-900 hover:bg-yellow-500"
-              : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            ? "bg-yellow-400 text-gray-900 hover:bg-yellow-500"
+            : "bg-gray-200 text-gray-400 cursor-not-allowed"
             }`}
         >
           Pay and Confirm

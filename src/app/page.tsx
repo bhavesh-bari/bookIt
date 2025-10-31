@@ -1,78 +1,82 @@
 "use client";
-import { useState } from "react";
+
+import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Body from "@/components/Body";
 
-const allExperiences = [
-  {
-    id: "exp1",
-    title: "Kayaking",
-    location: "Udupi",
-    description:
-      "Curated small-group experience. Certified guide. Safety first with gear included.",
-    price: 999,
-    imageUrl: "/kayak.jpg",
-  },
-  {
-    id: "exp2",
-    title: "Nandi Hills Sunrise",
-    location: "Bangalore",
-    description:
-      "Beautiful sunrise view with a professional guide. Ideal for early risers.",
-    price: 899,
-    imageUrl: "/sunrise.jpg",
-  },
-  {
-    id: "exp3",
-    title: "Coffee Trail",
-    location: "Coorg",
-    description:
-      "Walk through coffee plantations with an expert. Learn coffee making process.",
-    price: 1299,
-    imageUrl: "/coffee.jpg",
-  },
-  {
-    id: "exp4",
-    title: "Boat Cruise",
-    location: "Sundarban",
-    description:
-      "A scenic boat ride through the mangroves with an experienced guide.",
-    price: 999,
-    imageUrl: "/boat.jpg",
-  },
-  {
-    id: "exp5",
-    title: "Bunjee Jumping",
-    location: "Manali",
-    description:
-      "Thrilling jump experience with safety gear and professional trainers.",
-    price: 1499,
-    imageUrl: "/bunjee.jpg",
-  },
-  {
-    id: "exp6",
-    title: "Jungle Walk",
-    location: "Wayanad",
-    description:
-      "Explore the forest trails safely with trained local guides.",
-    price: 1199,
-    imageUrl: "/forest.jpg",
-  },
-];
+interface Experience {
+  _id: string;
+  name: string;
+  location: string;
+  description: string;
+  price: number;
+  imageUrl: string;
+}
 
 export default function Home() {
+  const [experiences, setExperiences] = useState<Experience[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filtered = allExperiences.filter((exp) =>
-    `${exp.title} ${exp.location}`
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
+  useEffect(() => {
+    const fetchExperiences = async () => {
+      try {
+        const res = await fetch("/api/experiences");
+        const data = await res.json();
+        setExperiences(data);
+      } catch (err) {
+        console.error("Failed to fetch experiences:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchExperiences();
+  }, []);
+
+  const filtered = experiences.filter((exp) =>
+    `${exp.name} ${exp.location}`.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="flex flex-col">
       <Navbar onSearch={setSearchTerm} />
-      <Body experiences={filtered} />
+      {loading ? (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 p-6">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-2xl overflow-hidden bg-white shadow-md border border-gray-100 animate-pulse"
+            >
+              {/* Image skeleton */}
+              <div className="h-48 bg-gray-200 w-full"></div>
+
+              {/* Content skeleton */}
+              <div className="p-4 space-y-3">
+                <div className="h-5 bg-gray-300 rounded w-3/4"></div>
+                <div className="h-4 bg-gray-200 rounded w-full"></div>
+                <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+
+                <div className="flex justify-between items-center pt-3">
+                  <div className="h-5 bg-gray-300 rounded w-16"></div>
+                  <div className="h-8 bg-gray-300 rounded-lg w-20"></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <Body
+          experiences={filtered.map((exp) => ({
+            id: exp._id,
+            title: exp.name,
+            location: exp.location,
+            description: exp.description,
+            price: exp.price,
+            imageUrl: exp.imageUrl,
+          }))}
+        />
+      )}
     </div>
   );
 }

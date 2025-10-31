@@ -1,34 +1,88 @@
 "use client";
+
 import Image from "next/image";
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+interface Slot {
+  date: string;
+  time: string;
+  available: number;
+}
+
+interface Experience {
+  _id: string;
+  name: string;
+  location: string;
+  description: string;
+  price: number;
+  imageUrl: string;
+  dates: string[];
+  slots: Slot[];
+}
 
 const BookingDetails = ({ id }: { id?: string }) => {
   const router = useRouter();
-  const [selectedDate, setSelectedDate] = useState("Oct 22");
-  const [selectedTime, setSelectedTime] = useState("9:00 am");
+  const searchParams = useSearchParams();
+  const experienceId = id || searchParams.get("id");
+
+  const [experience, setExperience] = useState<Experience | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedTime, setSelectedTime] = useState("");
   const [quantity, setQuantity] = useState(1);
 
-  const price = 999;
-  const taxes = 59;
-  const total = price * quantity - taxes;
+  useEffect(() => {
+    const fetchExperience = async () => {
+      try {
+        const res = await fetch(`/api/experiences/${experienceId}`);
+        if (!res.ok) throw new Error("Failed to fetch experience");
 
-  const dates = ["Oct 22", "Oct 23", "Oct 24", "Oct 25", "Oct 26"];
-  const times = [
-    { time: "07:00 am", left: 4 },
-    { time: "9:00 am", left: 2 },
-    { time: "11:00 am", left: 5 },
-    { time: "1:00 pm", left: 0 },
-  ];
+        const data = await res.json();
+        setExperience(data);
+
+        if (data?.dates?.length) setSelectedDate(data.dates[0]);
+        if (data?.slots?.length) setSelectedTime(data.slots[0].time);
+      } catch (err) {
+        console.error("Error fetching experience:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (experienceId) fetchExperience();
+  }, [experienceId]);
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto p-6 animate-pulse">
+        <div className="h-64 bg-gray-200 rounded-xl mb-4"></div>
+        <div className="h-6 bg-gray-300 w-1/3 mb-3"></div>
+        <div className="h-4 bg-gray-200 w-2/3 mb-2"></div>
+        <div className="h-4 bg-gray-200 w-1/2 mb-2"></div>
+      </div>
+    );
+  }
+
+  if (!experience) {
+    return <div className="text-center py-20 text-gray-600">Experience not found.</div>;
+  }
+
+  const taxes = 59;
+  const subtotal = experience.price * quantity;
+  const total = subtotal - taxes;
+
+  // ✅ Safe check to avoid undefined access
+  const availableSlots = experience?.slots?.filter((s) => s.date === selectedDate) || [];
 
   const handleConfirm = () => {
-    // Pass details to checkout via query params
     const params = new URLSearchParams({
-      name: "Kayaking",
+      name: experience.name,
       date: selectedDate,
       time: selectedTime,
       qty: quantity.toString(),
-      subtotal: (price * quantity).toString(),
+      subtotal: subtotal.toString(),
       taxes: taxes.toString(),
       total: total.toString(),
     });
@@ -37,42 +91,43 @@ const BookingDetails = ({ id }: { id?: string }) => {
   };
 
   return (
-    <section className="max-w-6xl mx-auto p-6 grid md:grid-cols-3 gap-8 bg-white ">
-      {/* Left side: Experience details */}
+    <section className="max-w-6xl mx-auto p-6 grid md:grid-cols-3 gap-8 bg-white">
+      {/* Left side */}
       <div className="md:col-span-2 space-y-6">
         <div className="relative w-full h-64 md:h-80 rounded-2xl overflow-hidden">
           <Image
-            src="/kayak.jpg"
-            alt="Kayaking"
+            src={experience.imageUrl || "/placeholder.jpg"}
+            alt={experience.name}
             fill
             className="object-cover"
           />
         </div>
 
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Kayaking</h1>
-          <p className="text-gray-600 mt-2">
-            Curated small-group experience. Certified guide. Safety first with gear included.
-            Helmet and life jackets along with an expert will accompany in kayaking.
-          </p>
+          <h1 className="text-2xl font-semibold text-gray-900">{experience.name}</h1>
+          <p className="text-gray-600 mt-2">{experience.description}</p>
         </div>
 
         {/* Choose date */}
         <div>
           <h2 className="font-medium text-gray-800 mb-3">Choose date</h2>
           <div className="flex flex-wrap gap-3">
-            {dates.map((date) => (
-              <button
-                key={date}
-                onClick={() => setSelectedDate(date)}
-                className={`px-4 py-2 rounded-md text-sm border transition-all ${selectedDate === date
+            {experience?.dates?.length ? (
+              experience.dates.map((date) => (
+                <button
+                  key={date}
+                  onClick={() => setSelectedDate(date)}
+                  className={`px-4 py-2 rounded-md text-sm border transition-all ${selectedDate === date
                     ? "bg-yellow-400 text-gray-900 font-semibold"
                     : "bg-gray-50 hover:bg-gray-100 text-gray-700"
-                  }`}
-              >
-                {date}
-              </button>
-            ))}
+                    }`}
+                >
+                  {date}
+                </button>
+              ))
+            ) : (
+              <p className="text-sm text-gray-400">No available dates.</p>
+            )}
           </div>
         </div>
 
@@ -80,47 +135,40 @@ const BookingDetails = ({ id }: { id?: string }) => {
         <div>
           <h2 className="font-medium text-gray-800 mb-3">Choose time</h2>
           <div className="flex flex-wrap gap-3">
-            {times.map((slot) => (
-              <button
-                key={slot.time}
-                disabled={slot.left === 0}
-                onClick={() => setSelectedTime(slot.time)}
-                className={`px-4 py-2 rounded-md text-sm border flex items-center gap-2 transition-all ${slot.left === 0
+            {availableSlots.length ? (
+              availableSlots.map((slot) => (
+                <button
+                  key={slot.time}
+                  disabled={slot.available === 0}
+                  onClick={() => setSelectedTime(slot.time)}
+                  className={`px-4 py-2 rounded-md text-sm border flex items-center gap-2 transition-all ${slot.available === 0
                     ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                     : selectedTime === slot.time
                       ? "bg-yellow-400 text-gray-900 font-semibold"
                       : "bg-white hover:bg-gray-50 text-gray-800"
-                  }`}
-              >
-                {slot.time}
-                {slot.left > 0 && (
-                  <span className="text-xs text-red-500">{slot.left} left</span>
-                )}
-              </button>
-            ))}
+                    }`}
+                >
+                  {slot.time}
+                  {slot.available > 0 && (
+                    <span className="text-xs text-red-500">{slot.available} left</span>
+                  )}
+                </button>
+              ))
+            ) : (
+              <p className="text-sm text-gray-400">No available slots for this date.</p>
+            )}
           </div>
-          <p className="text-xs text-gray-400 mt-2">
-            All times are in IST (GMT +5:30)
-          </p>
-        </div>
-
-        {/* About section */}
-        <div>
-          <h2 className="font-medium text-gray-800 mb-2">About</h2>
-          <p className="bg-gray-50 text-gray-600 p-3 rounded-md text-sm">
-            Scenic routes, trained guides, and safety briefing. Minimum age 10.
-          </p>
+          <p className="text-xs text-gray-400 mt-2">All times are in IST (GMT +5:30)</p>
         </div>
       </div>
 
-      {/* Right side: Booking summary */}
+      {/* Right side: Summary */}
       <aside className="bg-gray-50 rounded-xl p-6 h-fit shadow-md border border-gray-100 space-y-4">
         <div className="flex justify-between text-sm text-gray-600">
           <span>Starts at</span>
-          <span className="font-semibold text-gray-800">₹{price}</span>
+          <span className="font-semibold text-gray-800">₹{experience.price}</span>
         </div>
 
-        {/* Quantity selector */}
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-600">Quantity</span>
           <div className="flex items-center border rounded-md overflow-hidden">
@@ -144,7 +192,7 @@ const BookingDetails = ({ id }: { id?: string }) => {
 
         <div className="flex justify-between text-sm text-gray-600">
           <span>Subtotal</span>
-          <span>₹{price * quantity}</span>
+          <span>₹{subtotal}</span>
         </div>
         <div className="flex justify-between text-sm text-gray-600">
           <span>Taxes</span>
