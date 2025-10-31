@@ -1,7 +1,9 @@
+"use client";
+
+import React, { Suspense } from "react";
 import BookingDetails from "@/components/BookingDetails";
 import Navbar from "@/components/Navbar";
-import { ArrowLeft } from 'lucide-react';
-
+import { ArrowLeft } from "lucide-react";
 
 export default function Home() {
     return (
@@ -17,8 +19,16 @@ export default function Home() {
                     <h1 className="text-lg font-semibold text-black">Details</h1>
                 </div>
 
-                {/* Booking Details Component */}
-                <BookingDetails />
+                {/* Wrap BookingDetails in Suspense */}
+                <Suspense
+                    fallback={
+                        <div className="flex justify-center items-center h-64 text-gray-500">
+                            Loading booking details...
+                        </div>
+                    }
+                >
+                    <BookingDetails />
+                </Suspense>
             </div>
         </div>
     );
