@@ -1,16 +1,15 @@
 "use client";
+
 import { useSearchParams } from "next/navigation";
 import BookingConfirmed from "@/components/BookingConfirmed";
-import Navbar from "@/components/Navbar";
 
-export default function PaymentSuccessPage() {
+export default function PaymentSuccessClient() {
     const searchParams = useSearchParams();
     const id = searchParams.get("id");
 
     return (
-        <div className="flex flex-col min-h-screen bg-white">
-            <Navbar />
-            <BookingConfirmed bookingId={id ?? ""} />
+        <div className="w-full max-w-4xl mx-auto px-6 py-8">
+            <BookingConfirmed />
         </div>
     );
 }
